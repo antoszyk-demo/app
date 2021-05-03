@@ -1,7 +1,6 @@
 # Install npm packages
 FROM node:10.17.0-alpine AS npm
 WORKDIR /code
-RUN touch file
 COPY ./static/package*.json /code/static/
 RUN cd /code/static && npm install
 
