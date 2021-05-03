@@ -27,13 +27,31 @@ steps:
     tag: "${{CF_BRANCH_TAG_NORMALIZED}}"
     dockerfile: "Dockerfile"
     stage: "build"
-
-  test:
-    title: "Running test"
-    type: "freestyle" # Run any command
-    image: "ubuntu:latest" # The image in which command will be executed
-    working_directory: "${{clone}}" # Running command where code cloned
-    commands:
-      - "ls"
+  
+  tests:
     stage: "test"
-
+    type: parallel
+    steps:
+      poetry-test:
+        title: "poetry test"
+        type: "freestyle" # Run any command
+        image: "python:3.7"
+        working_directory: "${{clone}}" # Running command where code cloned
+        commands:
+          - "pip install poetry"
+          - "poetry config virtualenvs.create false"
+          - "poetry install --no-root"
+          - "poetry run pytest --junitxml=report.xml tests/"
+      test:
+        title: "Running test"
+        type: "freestyle" # Run any command
+        image: "ubuntu:latest" # The image in which command will be executed
+        working_directory: "${{clone}}" # Running command where code cloned
+        commands:
+          - "ls"
+      scan:
+        title: Scan images
+        type: freestyle
+        image: "aquasec/trivy" # The image in which command will be executed
+        commands:
+          - "trivy python:3.4-alpine"
