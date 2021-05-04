@@ -38,12 +38,9 @@ steps:
       poetry-test:
         title: "poetry test"
         type: "freestyle" # Run any command
-        image: "python:3.7"
+        image: "antoszykdemo/app:master"
         working_directory: "${{clone}}" # Running command where code cloned
         commands:
-          - "pip install poetry"
-          - "poetry config virtualenvs.create false"
-          - "poetry install --no-root"
           - "poetry run pytest --junitxml=report.xml tests/"
       test:
         title: "Running test"
