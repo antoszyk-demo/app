@@ -7,6 +7,7 @@ stages:
   - "clone"
   - "build"
   - "test"
+  - "deploy"
 
 steps:
   clone:
@@ -55,3 +56,19 @@ steps:
         image: "aquasec/trivy" # The image in which command will be executed
         commands:
           - "trivy antoszykdemo/app"
+
+   deploy:
+    type: helm
+    arguments:
+      action: install
+      chart_name: "${{clone}}/chart"
+      release_name: cf-app
+      helm_version: 3.0.1
+      kube_context: staging
+      namespace: demo
+      skip_cf_stable_helm_repo: true
+      credentials_in_arguments: true
+      custom_values:
+        - 'ingress.enabled=true'
+        - 'ingress.hosts[0].host=demo.app-demo.cf'
+        - "image.tag=${{CF_SHORT_REVISION}}"
