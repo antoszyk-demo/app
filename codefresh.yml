@@ -59,6 +59,7 @@ steps:
 
   deploy:
     type: helm
+    stage: "deploy"
     arguments:
       action: install
       chart_name: "${{clone}}/chart"
