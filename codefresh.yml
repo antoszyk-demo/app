@@ -57,7 +57,7 @@ steps:
         commands:
           - "trivy antoszykdemo/app"
 
-   deploy:
+  deploy:
     type: helm
     arguments:
       action: install
