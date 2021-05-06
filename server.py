@@ -873,7 +873,7 @@ def local_main():
             fake_data()
             add_sl_domains()
 
-    app.run(debug=True, port=7777)
+    app.run(host="0.0.0.0", debug=True, port=7777)
 
     # uncomment to run https locally
     # LOG.d("enable https")
