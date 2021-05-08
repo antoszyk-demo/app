@@ -10,6 +10,7 @@ stages:
   - "clone"
   - "build"
   - "test"
+  - "push"
   - "package"
   - "deploy"
 
@@ -44,17 +45,17 @@ steps:
       poetry:
         title: "poetry test"
         type: "freestyle" # Run any command
-        image: "antoszykdemo/app:master"
+        image: ${{build}}
         working_directory: "${{clone}}" # Running command where code cloned
         commands:
-          - "poetry run pytest --alluredir=$CF_VOLUME_PATH/allure-results --junitxml=report.xml tests/"
+          - "poetry run pytest --junitxml=report.xml tests/"
 
       scan:
         title: Scan images
         type: freestyle
-        image: "aquasec/trivy" # The image in which command will be executed
+        image: "harbor.demo-mgmt.cf/build_images/trivy" # The image in which command will be executed
         commands:
-          - "trivy antoszykdemo/app"
+          - "trivy harbor.demo-mgmt.cf/demo/app:${{CF_SHORT_REVISION}}"
 
 
   package:
