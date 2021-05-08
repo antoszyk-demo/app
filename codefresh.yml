@@ -48,7 +48,6 @@ steps:
         working_directory: "${{clone}}" # Running command where code cloned
         commands:
           - "poetry run pytest --alluredir=$CF_VOLUME_PATH/allure-results --junitxml=report.xml tests/"
-          -
 
       scan:
         title: Scan images
@@ -60,25 +59,25 @@ steps:
 
   package:
     stage: "package"
+    type: parallel
     steps:
+      unit_test_reporting:
+        title: Generate test reporting
+        image: codefresh/cf-docker-test-reporting
+        working_directory: '${{CF_VOLUME_PATH}}/'
+        environment:
+          - BUCKET_NAME=cf_demo_bucket
+          - CF_STORAGE_INTEGRATION=google
 
-    unit_test_reporting:
-    title: Generate test reporting
-    image: codefresh/cf-docker-test-reporting
-    working_directory: '${{CF_VOLUME_PATH}}/'
-    environment:
-      - BUCKET_NAME=cf_demo_bucket
-      - CF_STORAGE_INTEGRATION=google
-
-    helm_package:
-      title: Helm package
-      stage: "package"
-      type: helm
-      arguments:
-        action: push
-        helm_version: 3.4.1
-        chart_name: "/codefresh/volume/app/chart"
-        chart_repo_url: 'cm://h.cfcr.io/antoszyk-demo/default'
+      helm_package:
+        title: Helm package
+        stage: "package"
+        type: helm
+        arguments:
+          action: push
+          helm_version: 3.4.1
+          chart_name: "/codefresh/volume/app/chart"
+          chart_repo_url: 'cm://h.cfcr.io/antoszyk-demo/default'
 
   deploy:
     type: helm
