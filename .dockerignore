@@ -16,3 +16,4 @@ venv/
 htmlcov
 codefresh.yml
 LICENSE
+chart/
