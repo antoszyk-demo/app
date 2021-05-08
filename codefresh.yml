@@ -1,13 +1,18 @@
 # More examples of Codefresh YAML can be found at
 # https://codefresh.io/docs/docs/yaml-examples/examples/
 
+# More examples of Codefresh YAML can be found at
+# https://codefresh.io/docs/docs/yaml-examples/examples/
+
 version: "1.0"
 # Stages can help you organize your steps in stages
 stages:
   - "clone"
   - "build"
   - "test"
+  - "package"
   - "deploy"
+
 
 steps:
   clone:
@@ -25,31 +30,26 @@ steps:
     type: "build"
     image_name: "antoszykdemo/app"
     working_directory: "${{clone}}"
-    tags: 
+    tags:
       - "${{CF_BRANCH_TAG_NORMALIZED}}"
       - latest
       - "${{CF_SHORT_REVISION}}"
     dockerfile: "Dockerfile"
     stage: "build"
-  
+
   tests:
     stage: "test"
     type: parallel
     steps:
-      poetry-test:
+      poetry:
         title: "poetry test"
         type: "freestyle" # Run any command
         image: "antoszykdemo/app:master"
         working_directory: "${{clone}}" # Running command where code cloned
         commands:
-          - "poetry run pytest --junitxml=report.xml tests/"
-      test:
-        title: "Running test"
-        type: "freestyle" # Run any command
-        image: "ubuntu:latest" # The image in which command will be executed
-        working_directory: "${{clone}}" # Running command where code cloned
-        commands:
-          - "ls"
+          - "poetry run pytest --alluredir=$CF_VOLUME_PATH/allure-results --junitxml=report.xml tests/"
+          -
+
       scan:
         title: Scan images
         type: freestyle
@@ -57,12 +57,35 @@ steps:
         commands:
           - "trivy antoszykdemo/app"
 
+
+  package:
+    stage: "package"
+    steps:
+
+    unit_test_reporting:
+    title: Generate test reporting
+    image: codefresh/cf-docker-test-reporting
+    working_directory: '${{CF_VOLUME_PATH}}/'
+    environment:
+      - BUCKET_NAME=cf_demo_bucket
+      - CF_STORAGE_INTEGRATION=google
+
+    helm_package:
+      title: Helm package
+      stage: "package"
+      type: helm
+      arguments:
+        action: push
+        helm_version: 3.4.1
+        chart_name: "/codefresh/volume/app/chart"
+        chart_repo_url: 'cm://h.cfcr.io/antoszyk-demo/default'
+
   deploy:
     type: helm
     stage: "deploy"
     arguments:
       action: install
-      chart_name: "${{clone}}/chart"
+      chart_name: "/codefresh/volume/app/chart" # app is the repo that is cloned
       release_name: cf-app
       helm_version: 3.0.1
       kube_context: staging
@@ -70,6 +93,8 @@ steps:
       skip_cf_stable_helm_repo: true
       credentials_in_arguments: true
       custom_values:
+        - "image.tag=${{CF_SHORT_REVISION}}"
         - 'ingress.enabled=true'
         - 'ingress.hosts[0].host=demo.app-demo.cf'
-        - "image.tag=${{CF_SHORT_REVISION}}"
+        - 'ingress.hosts[0].paths[0].path=/'
+
