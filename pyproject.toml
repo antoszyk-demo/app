@@ -76,6 +76,7 @@ email_validator = "^1.1.1"
 PGPy = "^0.5.3"
 py3-validate-email = "^0.2.10"
 coinbase-commerce = "^1.0.1"
+allure-pytest = "^2.8.40"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.0"
@@ -87,4 +88,3 @@ flake8 = "^3.8.4"
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
-

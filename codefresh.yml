@@ -48,7 +48,8 @@ steps:
         image: ${{build}}
         working_directory: "${{clone}}" # Running command where code cloned
         commands:
-          - "poetry run pytest --junitxml=report.xml tests/"
+          - "poetry run pytest --alluredir=allure-results --junitxml=report.xml tests/"
+          - cp -rf ./allure-results $CF_VOLUME_PATH/allure-results
 
       scan:
         title: Scan images
@@ -57,6 +58,17 @@ steps:
         commands:
           - "trivy harbor.demo-mgmt.cf/demo/app:${{CF_SHORT_REVISION}}"
 
+  push_to_dockerhub:
+    stage: 'push'
+    type: push
+    title: Pushing to a registry
+    candidate: ${{build}}
+    tags:
+      - "${{CF_BRANCH_TAG_NORMALIZED}}"
+      - latest
+      - "${{CF_SHORT_REVISION}}"
+    registry: docker-hub
+    image_name: antoszykdemo/app
 
   package:
     stage: "package"
