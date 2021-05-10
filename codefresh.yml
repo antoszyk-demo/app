@@ -29,11 +29,11 @@ steps:
   build:
     title: "Building Docker image"
     type: "build"
-    image_name: "antoszykdemo/app"
+    image_name: "demo/app"
     working_directory: "${{clone}}"
-    tags:
+    registry: harbor
+    tags: 
       - "${{CF_BRANCH_TAG_NORMALIZED}}"
-      - latest
       - "${{CF_SHORT_REVISION}}"
     dockerfile: "Dockerfile"
     stage: "build"
