@@ -1,16 +1,12 @@
 # More examples of Codefresh YAML can be found at
 # https://codefresh.io/docs/docs/yaml-examples/examples/
 
-# More examples of Codefresh YAML can be found at
-# https://codefresh.io/docs/docs/yaml-examples/examples/
-
 version: "1.0"
 # Stages can help you organize your steps in stages
 stages:
   - "clone"
   - "build"
   - "test"
-  - "push"
   - "package"
   - "deploy"
 
@@ -38,42 +34,53 @@ steps:
     dockerfile: "Dockerfile"
     stage: "build"
 
-  tests:
+  Freestyle:
+    title: Running docker image
+    type: freestyle
     stage: "test"
-    type: parallel
-    steps:
-      poetry:
-        title: "poetry test"
-        type: "freestyle" # Run any command
-        image: ${{build}}
-        working_directory: "${{clone}}" # Running command where code cloned
-        commands:
-          - "poetry run pytest --alluredir=allure-results --junitxml=report.xml tests/"
-          - cp -rf ./allure-results $CF_VOLUME_PATH/allure-results
+    working_directory: '${{clone}}'
+    arguments:
+      image: 'harbor.demo-mgmt.cf/build_images/ubuntu'
+      commands:
+        - echo "Hello world"
+        - pwd
+        - ls -la
+        - env
 
-      scan:
-        title: Scan images
-        type: freestyle
-        image: "harbor.demo-mgmt.cf/build_images/trivy" # The image in which command will be executed
-        commands:
-          - "trivy harbor.demo-mgmt.cf/demo/app:${{CF_SHORT_REVISION}}"
+  tests:
+      stage: "test"
+      type: parallel
+      steps:
+        poetry:
+          title: "poetry test"
+          type: "freestyle" # Run any command
+          image: ${{build}}
+          working_directory: "${{clone}}" # Running command where code cloned
+          commands:
+            - "poetry run pytest --alluredir=allure-results --junitxml=report.xml tests/"
+            - cp -rf ./allure-results $CF_VOLUME_PATH/allure-results
 
-  push_to_dockerhub:
-    stage: 'push'
-    type: push
-    title: Pushing to a registry
-    candidate: ${{build}}
-    tags:
-      - "${{CF_BRANCH_TAG_NORMALIZED}}"
-      - latest
-      - "${{CF_SHORT_REVISION}}"
-    registry: docker-hub
-    image_name: antoszykdemo/app
+        scan:
+          title: Scan images
+          type: freestyle
+          image: "harbor.demo-mgmt.cf/build_images/trivy" # The image in which command will be executed
+          commands:
+            - "trivy harbor.demo-mgmt.cf/demo/app:${{CF_SHORT_REVISION}}"
 
   package:
     stage: "package"
     type: parallel
     steps:
+      push_to_dockerhub:
+        type: push
+        title: Pushing to a registry
+        candidate: ${{build}}
+        tags: 
+          - "${{CF_BRANCH_TAG_NORMALIZED}}"
+          - latest
+          - "${{CF_SHORT_REVISION}}"
+        registry: docker-hub
+        image_name: antoszykdemo/app
       unit_test_reporting:
         title: Generate test reporting
         image: codefresh/cf-docker-test-reporting
@@ -92,14 +99,38 @@ steps:
           chart_name: "/codefresh/volume/app/chart"
           chart_repo_url: 'cm://h.cfcr.io/antoszyk-demo/default'
 
-  deploy:
+  deploy_preview:
     type: helm
     stage: "deploy"
+    title: Deploy to preview environment
+    arguments:
+      action: install
+      chart_name: "/codefresh/volume/app/chart" # app is the repo that is cloned
+      release_name: "cf-app-${{CF_BRANCH_TAG_NORMALIZED}}"
+      helm_version: 3.4.1
+      kube_context: staging
+      namespace: "${{CF_BRANCH_TAG_NORMALIZED}}"
+      skip_cf_stable_helm_repo: true
+      credentials_in_arguments: true
+      cmd_ps: '--create-namespace'
+      custom_values:
+        - "image.tag=${{CF_SHORT_REVISION}}"
+        - 'ingress.enabled=true'
+        - 'ingress.hosts[0].host=${{CF_BRANCH_TAG_NORMALIZED}}.app-demo.cf'
+        - 'ingress.hosts[0].paths[0].path=/'
+    when:
+      branch:
+        only:
+          - /^feature\/.*/i
+  deploy_staging:
+    type: helm
+    stage: "deploy"
+    title: Deploy to staging
     arguments:
       action: install
       chart_name: "/codefresh/volume/app/chart" # app is the repo that is cloned
       release_name: cf-app
-      helm_version: 3.0.1
+      helm_version: 3.4.1
       kube_context: staging
       namespace: demo
       skip_cf_stable_helm_repo: true
@@ -109,4 +140,30 @@ steps:
         - 'ingress.enabled=true'
         - 'ingress.hosts[0].host=demo.app-demo.cf'
         - 'ingress.hosts[0].paths[0].path=/'
+    when:
+      branch:
+        only:
+          - master
 
+  deploy_prod:
+    type: helm
+    stage: "deploy"
+    title: Deploy to production
+    arguments:
+      action: install
+      chart_name: "/codefresh/volume/app/chart" # app is the repo that is cloned
+      release_name: cf-app
+      helm_version: 3.4.1
+      kube_context: prod
+      namespace: demo
+      skip_cf_stable_helm_repo: true
+      credentials_in_arguments: true
+      custom_values:
+        - "image.tag=${{CF_BRANCH_TAG_NORMALIZED}}"
+        - 'ingress.enabled=true'
+        - 'ingress.hosts[0].host=demo.prd-demo.cf'
+        - 'ingress.hosts[0].paths[0].path=/'
+    when:
+      branch:
+        only:
+          - /((\d+)\.){2}\d+/
