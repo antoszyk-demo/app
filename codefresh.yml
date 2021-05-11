@@ -118,6 +118,16 @@ steps:
         - 'ingress.enabled=true'
         - 'ingress.hosts[0].host=${{CF_BRANCH_TAG_NORMALIZED}}.app-demo.cf'
         - 'ingress.hosts[0].paths[0].path=/'
+    env:
+      name: preview
+      endpoints:
+      - name: "cf-app-${{CF_BRANCH_TAG_NORMALIZED}}"
+        url: http://${{CF_BRANCH_TAG_NORMALIZED}}.app-demo.cf
+      type: helm-release
+      change: ${{CF_COMMIT_MESSAGE}}
+      filters:
+      - cluster: my-cluster
+        namespace: default    
     when:
       branch:
         only:
@@ -132,7 +142,7 @@ steps:
       release_name: cf-app
       helm_version: 3.4.1
       kube_context: staging
-      namespace: demo
+      namespace: "${{CF_BRANCH_TAG_NORMALIZED}}"
       skip_cf_stable_helm_repo: true
       credentials_in_arguments: true
       custom_values:
@@ -140,6 +150,16 @@ steps:
         - 'ingress.enabled=true'
         - 'ingress.hosts[0].host=demo.app-demo.cf'
         - 'ingress.hosts[0].paths[0].path=/'
+    env:
+      name: staging
+      endpoints:
+      - name: cf-app-staging
+        url: http://demo.app-demo.cf
+      type: helm-release
+      change: ${{CF_COMMIT_MESSAGE}}
+      filters:
+      - cluster: staging
+        namespace: "${{CF_BRANCH_TAG_NORMALIZED}}"    
     when:
       branch:
         only:
@@ -163,6 +183,16 @@ steps:
         - 'ingress.enabled=true'
         - 'ingress.hosts[0].host=demo.prd-demo.cf'
         - 'ingress.hosts[0].paths[0].path=/'
+    env:
+      name: prod
+      endpoints:
+      - name: cf-app-prod
+        url: http://demo.prd-demo.cf
+      type: helm-release
+      change: ${{CF_COMMIT_MESSAGE}}
+      filters:
+      - cluster: prod
+        namespace: demo
     when:
       branch:
         only:
