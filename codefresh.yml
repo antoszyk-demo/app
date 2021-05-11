@@ -142,7 +142,7 @@ steps:
       release_name: cf-app
       helm_version: 3.4.1
       kube_context: staging
-      namespace: "${{CF_BRANCH_TAG_NORMALIZED}}"
+      namespace: demo
       skip_cf_stable_helm_repo: true
       credentials_in_arguments: true
       custom_values:
@@ -159,7 +159,7 @@ steps:
       change: ${{CF_COMMIT_MESSAGE}}
       filters:
       - cluster: staging
-        namespace: "${{CF_BRANCH_TAG_NORMALIZED}}"    
+        namespace: demo   
     when:
       branch:
         only:
