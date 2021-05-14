@@ -1,3 +1,6 @@
+.page-single {
+    background-color: red;
+}
 .profile-picture {
     /* make a square container */
     width: 150px;
